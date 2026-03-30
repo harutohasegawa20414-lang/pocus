@@ -350,12 +350,11 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
   )
 }
 
-/** モバイル用ハンバーガーメニューボタン */
+/** モバイル用ハンバーガーメニューボタン（Leaflet等のstacking context外にポータル描画） */
 export function MobileMenuButton({ onClick, dark }: { onClick: () => void; dark?: boolean }) {
-  return (
+  return createPortal(
     <button
-      onPointerUp={(e) => { e.stopPropagation(); onClick() }}
-      onClick={(e) => e.stopPropagation()}
+      onClick={() => onClick()}
       className={`md:hidden fixed top-3 left-3 p-2 rounded-xl shadow-lg backdrop-blur-sm transition-colors ${dark
           ? 'bg-[#0c0c0c]/90 text-[#e8e4dc] border border-[#2a2a2a]'
           : 'bg-white/90 text-stone-700 border border-stone-200'
@@ -363,7 +362,8 @@ export function MobileMenuButton({ onClick, dark }: { onClick: () => void; dark?
       style={{ zIndex: 1100, touchAction: 'manipulation' }}
     >
       <Menu size={20} />
-    </button>
+    </button>,
+    document.body,
   )
 }
 
