@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Loader2, Menu, X } from 'lucide-react'
 import {
@@ -63,6 +63,11 @@ interface SidebarProps {
   onMobileToggle?: () => void
 }
 
+// スワイプ検出の定数
+const EDGE_WIDTH = 24         // 左端の検出幅(px)
+const SWIPE_THRESHOLD = 60    // 開閉に必要なスワイプ距離(px)
+const DRAWER_WIDTH = 256      // ドロワー幅(w-64 = 256px)
+
 export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileOpen, onMobileToggle }: SidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -73,11 +78,19 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginChecking, setLoginChecking] = useState(false)
 
+  // スワイプ状態
+  const [dragging, setDragging] = useState(false)
+  const [dragX, setDragX] = useState(0)
+  const touchRef = useRef<{ startX: number; startY: number; started: boolean; edgeSwipe: boolean }>({
+    startX: 0, startY: 0, started: false, edgeSwipe: false,
+  })
+
   function handleAdminClick() {
     if (hasAdminToken()) {
       onMobileToggle?.()
       navigate('/admin')
     } else {
+      onMobileToggle?.()
       setShowLogin(true)
       setLoginToken('')
       setLoginError(null)
@@ -102,6 +115,106 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
       setLoginChecking(false)
     }
   }
+
+  // ── スワイプで開く: 画面左端からの右スワイプを検出 ──
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    // md以上（デスクトップ）では無効
+    if (window.innerWidth >= 768) return
+    const t = e.touches[0]
+    const isEdge = t.clientX < EDGE_WIDTH
+    touchRef.current = { startX: t.clientX, startY: t.clientY, started: false, edgeSwipe: isEdge }
+  }, [])
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (window.innerWidth >= 768) return
+    const ref = touchRef.current
+    const t = e.touches[0]
+    const dx = t.clientX - ref.startX
+    const dy = t.clientY - ref.startY
+
+    // まだドラッグ開始していない場合
+    if (!ref.started) {
+      // 縦スクロールの方が大きければ無視
+      if (Math.abs(dy) > Math.abs(dx)) return
+      // 横移動が10px超えたら開始判定
+      if (Math.abs(dx) < 10) return
+
+      if (mobileOpen) {
+        // ドロワーが開いている → 左スワイプで閉じる
+        if (dx < 0) {
+          ref.started = true
+          setDragging(true)
+        }
+      } else if (ref.edgeSwipe && dx > 0) {
+        // ドロワーが閉じている → 左端から右スワイプで開く
+        ref.started = true
+        setDragging(true)
+      }
+      if (!ref.started) return
+    }
+
+    e.preventDefault()
+
+    if (mobileOpen) {
+      // 閉じ方向: 0 〜 -DRAWER_WIDTH
+      setDragX(Math.max(-DRAWER_WIDTH, Math.min(0, dx)))
+    } else {
+      // 開き方向: 0 〜 DRAWER_WIDTH
+      setDragX(Math.max(0, Math.min(DRAWER_WIDTH, dx)))
+    }
+  }, [mobileOpen])
+
+  const handleTouchEnd = useCallback(() => {
+    if (!touchRef.current.started) {
+      setDragging(false)
+      setDragX(0)
+      return
+    }
+
+    if (mobileOpen) {
+      // 閉じ方向: 十分にスワイプしたら閉じる
+      if (dragX < -SWIPE_THRESHOLD) {
+        onMobileToggle?.()
+      }
+    } else {
+      // 開き方向: 十分にスワイプしたら開く
+      if (dragX > SWIPE_THRESHOLD) {
+        onMobileToggle?.()
+      }
+    }
+
+    touchRef.current.started = false
+    setDragging(false)
+    setDragX(0)
+  }, [mobileOpen, dragX, onMobileToggle])
+
+  useEffect(() => {
+    document.addEventListener('touchstart', handleTouchStart, { passive: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd, { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd])
+
+  // ドラッグ中のドロワー位置を計算
+  const drawerTranslateX = dragging
+    ? mobileOpen
+      ? dragX                              // 開いた状態から左へ
+      : -DRAWER_WIDTH + dragX              // 閉じた状態から右へ
+    : mobileOpen
+      ? 0                                  // 完全に開いた位置
+      : -DRAWER_WIDTH                      // 完全に閉じた位置
+
+  const overlayOpacity = dragging
+    ? mobileOpen
+      ? Math.max(0, 1 + dragX / DRAWER_WIDTH)
+      : Math.min(1, dragX / DRAWER_WIDTH)
+    : mobileOpen ? 1 : 0
+
+  const showDrawer = mobileOpen || dragging
 
   const sidebarContent = (
     <>
@@ -157,16 +270,27 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
         {sidebarContent}
       </aside>
 
-      {/* モバイル: オーバーレイドロワー */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-40">
+      {/* モバイル: スワイプ対応ドロワー */}
+      {showDrawer && (
+        <div className="md:hidden fixed inset-0 z-40" style={{ pointerEvents: overlayOpacity > 0 ? 'auto' : 'none' }}>
           {/* 背景オーバーレイ */}
-          <div className="absolute inset-0 bg-black/50" onClick={onMobileToggle} />
-          {/* ドロワー */}
-          <aside className={`relative w-64 h-full flex flex-col shadow-xl ${dark
-              ? 'bg-[#0c0c0c]'
-              : 'bg-white'
-            }`}>
+          <div
+            className="absolute inset-0 bg-black"
+            style={{ opacity: overlayOpacity * 0.5 }}
+            onClick={onMobileToggle}
+          />
+          {/* ドロワー本体 */}
+          <aside
+            className={`absolute top-0 left-0 w-64 h-full flex flex-col shadow-xl ${dark
+                ? 'bg-[#0c0c0c]'
+                : 'bg-white'
+              }`}
+            style={{
+              transform: `translateX(${drawerTranslateX}px)`,
+              transition: dragging ? 'none' : 'transform 0.3s ease',
+              willChange: 'transform',
+            }}
+          >
             {sidebarContent}
           </aside>
         </div>
@@ -174,8 +298,10 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
 
       {/* 管理ログインモーダル */}
       {showLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+             onClick={() => setShowLogin(false)}>
           <form
+            onClick={e => e.stopPropagation()}
             onSubmit={handleLogin}
             className="bg-gray-900 rounded-xl p-8 w-80 flex flex-col gap-4 shadow-xl relative"
           >
