@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // venues コレクション: 誰でも読み取り可、書き込みは不可
+    match /venues/{venueId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    // その他のコレクション: デフォルト拒否
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

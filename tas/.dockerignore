@@ -1,0 +1,7 @@
+.venv/
+ui/
+tests/
+make_dev.log
+**/__pycache__/
+*.pyc
+.env

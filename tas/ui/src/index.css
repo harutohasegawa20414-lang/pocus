@@ -1,0 +1,74 @@
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold: #C9A94D;
+  --gold-dark: #a07830;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: #FAFAF8;
+  color: #1C1917;
+}
+
+/* Leaflet カスタム */
+.leaflet-container {
+  background: #f0ede8;
+}
+
+.pocus-pin {
+  background: none;
+  border: none;
+}
+
+.pocus-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  padding: 0;
+  overflow: hidden;
+}
+
+.pocus-popup .leaflet-popup-content {
+  margin: 0;
+  min-width: 200px;
+}
+
+.pocus-popup .leaflet-popup-tip {
+  background: white;
+}
+
+/* スクロールバー */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 2px;
+}
+
+/* モーダルアニメーション */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
