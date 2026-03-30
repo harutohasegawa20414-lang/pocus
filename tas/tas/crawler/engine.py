@@ -20,6 +20,7 @@ from tas.constants import (
     MAX_RESCAN_INTERVAL_HOURS,
     TOURNAMENT_TITLE_SIMILARITY_THRESHOLD,
 )
+from tas.crawler.ai_verify import verify_venue
 from tas.crawler.fetcher import fetch
 from tas.crawler.geocoder import geocode, geocode_area
 from tas.crawler.link_extractor import extract_external_venue_links, extract_venue_links
@@ -525,9 +526,32 @@ class CrawlEngine:
                 table_count=page.table_count,
                 peak_time=page.peak_time,
                 verification_status="unverified",
-                visibility_status="visible",
+                visibility_status="pending_review",
                 last_updated_at=datetime.now(timezone.utc),
             )
+            # AI検証: 実在するポーカー店舗かどうかを自動判定
+            area_str = " ".join(
+                filter(None, [page.area_prefecture, page.area_city])
+            )
+            price_str = (
+                f"{page.price_entry_min}円" if page.price_entry_min else ""
+            )
+            visibility, reason = await verify_venue(
+                name=page.venue_name,
+                url=source.seed_url,
+                address=page.address or "",
+                area=area_str,
+                hours=page.hours_raw or "",
+                price=price_str,
+                summary=page.summary or "",
+            )
+            venue.visibility_status = visibility
+            if visibility == "visible":
+                venue.verification_status = "ai_approved"
+            elif visibility == "hidden":
+                venue.verification_status = "ai_rejected"
+            # pending_review の場合は verification_status="unverified" のまま
+
             self.session.add(venue)
             await self.session.flush()
 

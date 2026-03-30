@@ -74,7 +74,7 @@ class Venue(Base):
         Text, nullable=False, default="unverified"
     )
     visibility_status: Mapped[str] = mapped_column(
-        Text, nullable=False, default="visible"
+        Text, nullable=False, default="pending_review"
     )
     match_confidence: Mapped[float | None] = mapped_column(Numeric(3, 2), nullable=True)
     country_code: Mapped[str] = mapped_column(Text, nullable=False, default="JP")

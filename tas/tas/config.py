@@ -126,6 +126,10 @@ class Settings(BaseSettings):
     # データ鮮度モニタリング
     stale_days: int = 30                  # 鮮度切れとみなす日数
 
+    # AI検証（Gemini）
+    gemini_api_key: Optional[str] = None
+    gemini_model: str = "gemini-2.5-flash-lite"
+
     # Google Sheets
     google_service_account_json: Optional[str] = None
     google_sheets_id: Optional[str] = None
