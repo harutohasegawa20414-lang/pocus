@@ -60,11 +60,12 @@ export default function HomePage() {
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('idle')
 
   // 近くの店舗トグル（GPS確認付き）
-  async function handleNearToggle() {
+  function handleNearToggle() {
     if (filters.near) {
       // OFF
       setFilters(f => ({ ...f, near: false }))
       setPage(0)
+      setGpsStatus('idle')
       return
     }
 
@@ -74,6 +75,7 @@ export default function HomePage() {
       return
     }
 
+    // 前回のエラー状態をリセットしてから再試行
     setGpsStatus('loading')
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -82,16 +84,11 @@ export default function HomePage() {
         setPage(0)
         setGpsStatus('ok')
       },
-      (err) => {
-        if (err.code === 1 /* PERMISSION_DENIED */) {
-          setGpsStatus('denied')
-        } else if (err.code === 2 /* POSITION_UNAVAILABLE */) {
-          setGpsStatus('error')
-        } else {
-          setGpsStatus('error')
-        }
+      () => {
+        // denied / unavailable / timeout 全て同じ扱い（再試行可能）
+        setGpsStatus('error')
       },
-      { timeout: GPS_TIMEOUT_MS, maximumAge: GPS_MAX_AGE_MS, enableHighAccuracy: false }
+      { timeout: GPS_TIMEOUT_MS, maximumAge: GPS_MAX_AGE_MS, enableHighAccuracy: true }
     )
   }
 
@@ -304,19 +301,7 @@ export default function HomePage() {
                 GPS 有効・現在地取得済み
               </p>
             )}
-            {gpsStatus === 'denied' && (
-              <p className="flex items-start gap-1 px-3 pb-1.5 text-[10px] text-red-400 leading-snug">
-                <WifiOff size={10} className="mt-0.5 flex-shrink-0" />
-                位置情報へのアクセスが<br />拒否されています
-              </p>
-            )}
-            {gpsStatus === 'unsupported' && (
-              <p className="flex items-start gap-1 px-3 pb-1.5 text-[10px] text-stone-400 leading-snug">
-                <WifiOff size={10} className="mt-0.5 flex-shrink-0" />
-                このブラウザはGPSを<br />サポートしていません
-              </p>
-            )}
-            {gpsStatus === 'error' && (
+            {(gpsStatus === 'error' || gpsStatus === 'denied' || gpsStatus === 'unsupported') && (
               <p className="flex items-start gap-1 px-3 pb-1.5 text-[10px] text-amber-500 leading-snug">
                 <WifiOff size={10} className="mt-0.5 flex-shrink-0" />
                 位置情報を取得できませんでした。
