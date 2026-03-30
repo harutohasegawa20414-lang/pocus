@@ -125,6 +125,9 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
   const handleTouchStart = useCallback((e: TouchEvent) => {
     // md以上（デスクトップ）では無効
     if (window.innerWidth >= 768) return
+    // ボタン等のインタラクティブ要素上では無効
+    const el = e.target as HTMLElement
+    if (el.closest('button, a, input, [role="button"]')) return
     const t = e.touches[0]
     const isEdge = t.clientX < EDGE_WIDTH
     touchRef.current = { startX: t.clientX, startY: t.clientY, started: false, edgeSwipe: isEdge }
@@ -351,12 +354,13 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
 export function MobileMenuButton({ onClick, dark }: { onClick: () => void; dark?: boolean }) {
   return (
     <button
-      onClick={onClick}
+      onPointerUp={(e) => { e.stopPropagation(); onClick() }}
+      onClick={(e) => e.stopPropagation()}
       className={`md:hidden fixed top-3 left-3 p-2 rounded-xl shadow-lg backdrop-blur-sm transition-colors ${dark
           ? 'bg-[#0c0c0c]/90 text-[#e8e4dc] border border-[#2a2a2a]'
           : 'bg-white/90 text-stone-700 border border-stone-200'
         }`}
-      style={{ zIndex: 1100 }}
+      style={{ zIndex: 1100, touchAction: 'manipulation' }}
     >
       <Menu size={20} />
     </button>
