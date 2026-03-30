@@ -85,12 +85,16 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
     startX: 0, startY: 0, started: false, edgeSwipe: false,
   })
 
+  function closeMobileDrawer() {
+    if (mobileOpen) onMobileToggle?.()
+  }
+
   function handleAdminClick() {
     if (hasAdminToken()) {
-      onMobileToggle?.()
+      closeMobileDrawer()
       navigate('/admin')
     } else {
-      onMobileToggle?.()
+      closeMobileDrawer()
       setShowLogin(true)
       setLoginToken('')
       setLoginError(null)
@@ -343,10 +347,11 @@ export function MobileMenuButton({ onClick, dark }: { onClick: () => void; dark?
   return (
     <button
       onClick={onClick}
-      className={`md:hidden fixed top-3 left-3 z-30 p-2 rounded-xl shadow-lg backdrop-blur-sm transition-colors ${dark
+      className={`md:hidden fixed top-3 left-3 p-2 rounded-xl shadow-lg backdrop-blur-sm transition-colors ${dark
           ? 'bg-[#0c0c0c]/90 text-[#e8e4dc] border border-[#2a2a2a]'
           : 'bg-white/90 text-stone-700 border border-stone-200'
         }`}
+      style={{ zIndex: 1100 }}
     >
       <Menu size={20} />
     </button>
