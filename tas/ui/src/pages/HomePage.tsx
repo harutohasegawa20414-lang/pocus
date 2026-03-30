@@ -74,19 +74,6 @@ export default function HomePage() {
       return
     }
 
-    // Permissions API で事前確認（Chrome/Firefox）
-    if ('permissions' in navigator) {
-      try {
-        const perm = await navigator.permissions.query({ name: 'geolocation' as PermissionName })
-        if (perm.state === 'denied') {
-          setGpsStatus('denied')
-          return
-        }
-      } catch {
-        // Permissions API 非対応の場合はスキップ
-      }
-    }
-
     setGpsStatus('loading')
     navigator.geolocation.getCurrentPosition(
       (pos) => {
