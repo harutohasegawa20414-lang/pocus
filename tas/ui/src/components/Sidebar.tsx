@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Loader2, Menu, X } from 'lucide-react'
 import {
@@ -300,10 +301,13 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
         </div>
       )}
 
-      {/* 管理ログインモーダル */}
-      {showLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-             onClick={() => setShowLogin(false)}>
+      {/* 管理ログインモーダル — body直下にポータル描画でマップの上に確実に表示 */}
+      {showLogin && createPortal(
+        <div
+          className="fixed inset-0 flex items-center justify-center"
+          style={{ zIndex: 99999, backgroundColor: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setShowLogin(false)}
+        >
           <form
             onClick={e => e.stopPropagation()}
             onSubmit={handleLogin}
@@ -336,7 +340,8 @@ export default function Sidebar({ subtitle, children, dark, onLogoClick, mobileO
               {loginChecking ? '確認中...' : '入室'}
             </button>
           </form>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
